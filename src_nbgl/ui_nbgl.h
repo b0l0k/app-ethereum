@@ -13,6 +13,7 @@ extern nbgl_page_t* pageContext;
 void releaseContext(void);
 
 const nbgl_icon_details_t* get_app_icon(bool caller_icon);
+const nbgl_icon_details_t *get_tx_icon(void);
 
 void ui_idle(void);
 void ui_menu_settings(void);
