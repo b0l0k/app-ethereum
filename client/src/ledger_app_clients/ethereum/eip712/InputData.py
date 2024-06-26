@@ -14,7 +14,7 @@ from client.client import EthAppClient, EIP712FieldType
 # global variables
 app_client: EthAppClient = None
 filtering_paths: dict = {}
-current_path: list[str] = list()
+current_path: list[str] = []
 sig_ctx: dict[str, Any] = {}
 
 
@@ -30,7 +30,7 @@ is_golden_run: bool
 # Input  = "uint8[2][][4]"          |   "bool"
 # Output = ('uint8', [2, None, 4])  |   ('bool', [])
 def get_array_levels(typename):
-    array_lvls = list()
+    array_lvls = []
     regex = re.compile(r"(.*)\[([0-9]*)\]$")
 
     while True:
@@ -71,14 +71,17 @@ def parse_uint(typesize):
     return (EIP712FieldType.UINT, int(typesize / 8))
 
 
+# pylint: disable=unused-argument
 def parse_address(typesize):
     return (EIP712FieldType.ADDRESS, None)
 
 
+# pylint: disable=unused-argument
 def parse_bool(typesize):
     return (EIP712FieldType.BOOL, None)
 
 
+# pylint: disable=unused-argument
 def parse_string(typesize):
     return (EIP712FieldType.STRING, None)
 
@@ -105,7 +108,7 @@ def send_struct_def_field(typename, keyname):
     (typename, array_lvls) = get_array_levels(typename)
     (typename, typesize) = get_typesize(typename)
 
-    if typename in parsing_type_functions.keys():
+    if typename in parsing_type_functions:
         (type_enum, typesize) = parsing_type_functions[typename](typesize)
     else:
         type_enum = EIP712FieldType.CUSTOM
@@ -157,14 +160,17 @@ def encode_hex_string(value: str, size: int) -> bytes:
     return bytes.fromhex(value)
 
 
+# pylint: disable=unused-argument
 def encode_address(value: str, typesize: int) -> bytes:
     return encode_hex_string(value, 20)
 
 
+# pylint: disable=unused-argument
 def encode_bool(value: str, typesize: int) -> bytes:
     return encode_integer(value, 1)
 
 
+# pylint: disable=unused-argument
 def encode_string(value: str, typesize: int) -> bytes:
     return value.encode()
 
@@ -173,6 +179,7 @@ def encode_bytes_fix(value: str, typesize: int) -> bytes:
     return encode_hex_string(value, typesize)
 
 
+# pylint: disable=unused-argument
 def encode_bytes_dyn(value: str, typesize: int) -> bytes:
     # length of the value string
     # - the length of 0x (2)
@@ -193,8 +200,8 @@ encoding_functions[EIP712FieldType.DYN_BYTES] = encode_bytes_dyn
 
 def send_struct_impl_field(value, field):
     # Something wrong happened if this triggers
-    if isinstance(value, list) or (field["enum"] == EIP712FieldType.CUSTOM):
-        breakpoint()
+    assert not isinstance(value, list)
+    assert field["enum"] != EIP712FieldType.CUSTOM
 
     data = encoding_functions[field["enum"]](value, field["typesize"])
 
@@ -240,8 +247,7 @@ def evaluate_field(structs, data, field, lvls_left, new_level=True):
             idx += 1
         if array_lvls[lvls_left - 1] is not None:
             if array_lvls[lvls_left - 1] != idx:
-                print("Mismatch in array size! Got %d, expected %d\n" %
-                      (idx, array_lvls[lvls_left - 1]),
+                print(f"Mismatch in array size! Got {idx}, expected {array_lvls[lvls_left - 1]}\n",
                       file=sys.stderr)
                 return False
     else:
@@ -260,8 +266,7 @@ def send_struct_impl(structs, data, structname):
     if structname not in structs.keys():
         return False
 
-    struct = structs[structname]
-    for f in struct:
+    for f in structs[structname]:
         if not evaluate_field(structs, data[f["name"]], f, len(f["array_lvls"])):
             return False
     return True
@@ -280,8 +285,6 @@ def start_signature_payload(ctx: dict, magic: int) -> bytearray:
 
 # ledgerjs doesn't actually sign anything, and instead uses already pre-computed signatures
 def send_filtering_message_info(display_name: str, filters_count: int):
-    global sig_ctx
-
     to_sign = start_signature_payload(sig_ctx, 183)
     to_sign.append(filters_count)
     to_sign += display_name.encode()
@@ -293,8 +296,6 @@ def send_filtering_message_info(display_name: str, filters_count: int):
 
 
 def send_filtering_amount_join_token(token_idx: int):
-    global sig_ctx
-
     path_str = ".".join(current_path)
 
     to_sign = start_signature_payload(sig_ctx, 11)
@@ -306,8 +307,6 @@ def send_filtering_amount_join_token(token_idx: int):
 
 
 def send_filtering_amount_join_value(token_idx: int, display_name: str):
-    global sig_ctx
-
     path_str = ".".join(current_path)
 
     to_sign = start_signature_payload(sig_ctx, 22)
@@ -320,8 +319,6 @@ def send_filtering_amount_join_value(token_idx: int, display_name: str):
 
 
 def send_filtering_datetime(display_name: str):
-    global sig_ctx
-
     path_str = ".".join(current_path)
 
     to_sign = start_signature_payload(sig_ctx, 33)
@@ -334,8 +331,6 @@ def send_filtering_datetime(display_name: str):
 
 # ledgerjs doesn't actually sign anything, and instead uses already pre-computed signatures
 def send_filtering_raw(display_name):
-    global sig_ctx
-
     path_str = ".".join(current_path)
 
     to_sign = start_signature_payload(sig_ctx, 72)
@@ -346,7 +341,7 @@ def send_filtering_raw(display_name):
         pass
 
 
-def prepare_filtering(filtr_data, message):
+def prepare_filtering(filtr_data):
     global filtering_paths
 
     if "fields" in filtr_data:
@@ -369,8 +364,6 @@ def handle_optional_domain_values(domain):
 
 
 def init_signature_context(types, domain):
-    global sig_ctx
-
     handle_optional_domain_values(domain)
     caddr = domain["verifyingContract"]
     if caddr.startswith("0x"):
@@ -413,7 +406,6 @@ def process_data(aclient: EthAppClient,
                  filters: Optional[dict] = None,
                  autonext: Optional[Callable] = None,
                  golden_run: bool = False) -> bool:
-    global sig_ctx
     global app_client
     global autonext_handler
     global is_golden_run
@@ -447,7 +439,7 @@ def process_data(aclient: EthAppClient,
     if filters:
         with app_client.eip712_filtering_activate():
             pass
-        prepare_filtering(filters, message)
+        prepare_filtering(filters)
 
     # send domain implementation
     with app_client.eip712_send_struct_impl_root_struct(domain_typename):

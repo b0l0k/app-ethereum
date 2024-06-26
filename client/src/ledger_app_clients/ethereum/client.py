@@ -1,15 +1,15 @@
-import rlp
 from enum import IntEnum
+from typing import Optional
+import rlp
+from web3 import Web3
 from ragger.backend import BackendInterface
 from ragger.utils import RAPDU
-from typing import Optional
 
 from .command_builder import CommandBuilder
 from .eip712 import EIP712FieldType
 from .keychain import sign_data, Key
 from .tlv import format_tlv
 
-from web3 import Web3
 
 
 class StatusWord(IntEnum):
