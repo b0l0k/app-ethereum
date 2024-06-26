@@ -7,7 +7,6 @@ from web3 import Web3
 from ragger.backend import BackendInterface
 from ragger.firmware import Firmware
 from ragger.navigator import Navigator, NavInsID
-from ragger.navigator.navigation_scenario import NavigateWithScenario
 from ragger.error import ExceptionRAPDU
 
 from constants import ABIS_FOLDER
@@ -77,8 +76,8 @@ def test_blind_sign(firmware: Firmware,
                 test_name += "_rejected"
 
             moves = []
-            if firmware.device.startswith("nano"):
-                if firmware.device == "nanos":
+            if firmware.is_nano:
+                if firmware == Firmware.NANOS:
                     moves += [NavInsID.RIGHT_CLICK] * 2
                 else:
                     moves += [NavInsID.RIGHT_CLICK] * 4
@@ -89,7 +88,7 @@ def test_blind_sign(firmware: Firmware,
                 moves += [NavInsID.BOTH_CLICK]
 
                 if sign:
-                    if firmware.device == "nanos":
+                    if firmware == Firmware.NANOS:
                         moves += [NavInsID.RIGHT_CLICK] * 10
                     else:
                         moves += [NavInsID.RIGHT_CLICK] * 6
@@ -122,7 +121,7 @@ def test_blind_sign_reject_in_risk_review(firmware: Firmware,
                                           test_name: str):
     app_client = EthAppClient(backend)
 
-    if firmware.device not in ["stax", "flex"]:
+    if firmware.is_nano:
         pytest.skip("Not supported on non-NBGL apps")
 
     try:
@@ -142,7 +141,6 @@ def test_blind_sign_reject_in_risk_review(firmware: Firmware,
 def test_sign_parameter_selector(firmware: Firmware,
                                  backend: BackendInterface,
                                  navigator: Navigator,
-                                 scenario_navigator: NavigateWithScenario,
                                  test_name: str,
                                  default_screenshot_path: Path):
     global DEVICE_ADDR
@@ -174,14 +172,14 @@ def test_sign_parameter_selector(firmware: Firmware,
             else:
                 moves += ([NavInsID.RIGHT_CLICK] * 2 + [NavInsID.BOTH_CLICK]) * flows
 
-            if firmware.device == "nanos":
+            if firmware == Firmware.NANOS:
                 moves += [NavInsID.RIGHT_CLICK] * 2
             else:
                 moves += [NavInsID.RIGHT_CLICK] * 4
             moves += [NavInsID.BOTH_CLICK]
 
-            if firmware.device == "nanos":
-                pass
+            if firmware == Firmware.NANOS:
+                # pass
                 moves += [NavInsID.RIGHT_CLICK] * 9
             else:
                 moves += [NavInsID.RIGHT_CLICK] * 5
