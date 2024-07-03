@@ -5,42 +5,50 @@ from typing import Union
 
 
 class SettingID(Enum):
-    BLIND_SIGNING = auto()
-    DEBUG_DATA = auto()
-    NONCE = auto()
-    VERBOSE_EIP712 = auto()
     VERBOSE_ENS = auto()
+    VERBOSE_EIP712 = auto()
+    NONCE = auto()
+    DEBUG_DATA = auto()
 
 
 def get_device_settings(device: str) -> list[SettingID]:
     if device == "nanos":
         return [
-            SettingID.BLIND_SIGNING,
-            SettingID.DEBUG_DATA,
-            SettingID.NONCE
-        ]
-    if (device == "nanox") or (device == "nanosp") or (device == "stax"):
-        return [
-            SettingID.BLIND_SIGNING,
-            SettingID.DEBUG_DATA,
             SettingID.NONCE,
+            SettingID.DEBUG_DATA,
+        ]
+    if device in ("nanox", "nanosp", "stax", "flex"):
+        return [
+            SettingID.VERBOSE_ENS,
             SettingID.VERBOSE_EIP712,
-            SettingID.VERBOSE_ENS
+            SettingID.NONCE,
+            SettingID.DEBUG_DATA,
         ]
     return []
 
 
-settings_per_page = 3
+def get_setting_per_page(device: str) -> int:
+    if device == "stax":
+        return 3
+    return 2
 
 
 def get_setting_position(device: str, setting: Union[NavInsID, SettingID]) -> tuple[int, int]:
-    screen_height = 672  # px
-    header_height = 85  # px
-    footer_height = 124  # px
+    settings_per_page = get_setting_per_page(device)
+    if device == "stax":
+        screen_height = 672  # px
+        header_height = 85  # px
+        footer_height = 132  # px
+        option_offset = 350  # px
+    else:
+        screen_height = 600  # px
+        header_height = 92  # px
+        footer_height = 97  # px
+        option_offset = 420  # px
     usable_height = screen_height - (header_height + footer_height)
     setting_height = usable_height // settings_per_page
     index_in_page = get_device_settings(device).index(SettingID(setting)) % settings_per_page
-    return 350, header_height + (setting_height * index_in_page) + (setting_height // 2)
+    return option_offset, header_height + (setting_height * index_in_page) + (setting_height // 2)
 
 
 def settings_toggle(fw: Firmware, nav: Navigator, to_toggle: list[SettingID]):
@@ -57,7 +65,7 @@ def settings_toggle(fw: Firmware, nav: Navigator, to_toggle: list[SettingID]):
         moves += [NavInsID.BOTH_CLICK]  # Back
     else:
         moves += [NavInsID.USE_CASE_HOME_SETTINGS]
-        moves += [NavInsID.USE_CASE_SETTINGS_NEXT]
+        settings_per_page = get_setting_per_page(fw.device)
         for setting in settings:
             setting_idx = settings.index(setting)
             if (setting_idx > 0) and (setting_idx % settings_per_page) == 0:

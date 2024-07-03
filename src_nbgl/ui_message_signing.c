@@ -33,7 +33,7 @@ void ui_message_start(const char *title,
                       void (*rejected_func)(void)) {
     g_approved_func = approved_func;
     g_rejected_func = rejected_func;
-    nbgl_useCaseReviewStart(&C_Message_64px,
+    nbgl_useCaseReviewStart(&C_Review_64px,
                             title,
                             NULL,
                             REJECT_BUTTON,
@@ -41,10 +41,18 @@ void ui_message_start(const char *title,
                             ui_message_confirm_rejection);
 }
 
-void ui_message_712_approved(void) {
+static void ui_message_712_approved(void) {
     ui_712_approve();
 }
 
-void ui_message_712_rejected(void) {
+static void ui_message_712_rejected(void) {
     ui_712_reject();
+}
+
+void ui_typed_message_review_choice(bool confirm) {
+    if (confirm) {
+        nbgl_useCaseReviewStatus(STATUS_TYPE_MESSAGE_SIGNED, ui_message_712_approved);
+    } else {
+        nbgl_useCaseReviewStatus(STATUS_TYPE_MESSAGE_REJECTED, ui_message_712_rejected);
+    }
 }
